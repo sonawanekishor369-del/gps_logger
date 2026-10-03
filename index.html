@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📍 Instant GPS Location Logger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at 50% 0%, #1a233a 0%, #0b0f19 100%);
+            --card-bg: rgba(22, 31, 49, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-glow: #00f2fe;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --mono-font: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0b0f19;
+            background-image: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 440px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2rem 1.5rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 50% 20%, rgba(0, 242, 254, 0.06), transparent 50%);
+            pointer-events: none;
+        }
+
+        /* Radar Pulse Animation */
+        .radar-box {
+            position: relative;
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 1.5rem auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .radar-pin {
+            width: 54px;
+            height: 54px;
+            background: linear-gradient(135deg, #00f2fe, #4facfe);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            box-shadow: 0 0 25px rgba(0, 242, 254, 0.5);
+            z-index: 2;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .radar-pin.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+        }
+
+        .radar-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid var(--accent-glow);
+            animation: pulseRing 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+            opacity: 0;
+        }
+
+        @keyframes pulseRing {
+            0% {
+                transform: scale(0.5);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1.6);
+                opacity: 0;
+            }
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+
+        p.subtitle {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .status-badge.loading {
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.3);
+        }
+
+        .status-badge.success {
+            color: #34d399;
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .status-badge.error {
+            color: #f87171;
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        /* Data Card */
+        .data-card {
+            background: rgba(11, 15, 25, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 1.25rem;
+            text-align: left;
+            margin-bottom: 1.5rem;
+            display: none;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.88rem;
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .data-label {
+            color: var(--text-secondary);
+        }
+
+        .data-value {
+            font-family: var(--mono-font);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Action Buttons */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00f2fe, #4facfe);
+            color: #0b0f19;
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 242, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.07);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(16, 185, 129, 0.9);
+            color: #000;
+            padding: 0.75rem 1.5rem;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 99;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .tip-box {
+            margin-top: 1.5rem;
+            padding: 0.8rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Radar Pulse Icon -->
+        <div class="radar-box">
+            <div class="radar-pulse"></div>
+            <div class="radar-pin" id="radarPin">📍</div>
+        </div>
+
+        <h1>Instant GPS Logger</h1>
+        <p class="subtitle">Fetching high-accuracy coordinates & creating <code>location_coordinates.txt</code></p>
+
+        <!-- Status Badge -->
+        <div class="status-badge loading" id="statusBadge">
+            <span class="dot">⏳</span> <span id="statusText">Requesting location...</span>
+        </div>
+
+        <!-- Location Data Preview -->
+        <div class="data-card" id="dataCard">
+            <div class="data-row">
+                <span class="data-label">Latitude</span>
+                <span class="data-value" id="valLat">--</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Longitude</span>
+                <span class="data-value" id="valLng">--</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Accuracy</span>
+                <span class="data-value" id="valAcc">--</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">Timestamp</span>
+                <span class="data-value" id="valTime">--</span>
+            </div>
+        </div>
+
+        <!-- Error Help Card -->
+        <div class="data-card" id="errorHelpCard" style="display: none; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05);">
+            <div style="font-size: 0.85rem; text-align: left; color: #fca5a5; line-height: 1.5;">
+                <strong id="errorHelpTitle">🔒 HTTPS Connection Required</strong>
+                <p id="errorHelpMsg" style="margin-top: 0.4rem; color: #cbd5e1; font-size: 0.8rem;">
+                    Modern mobile browsers block GPS access for local files (<code>content://</code> / <code>file://</code>) or insecure non-HTTPS links.
+                </p>
+                <div style="margin-top: 0.8rem; font-size: 0.78rem; color: #94a3b8;">
+                    <strong>Solutions:</strong>
+                    <ul style="margin-left: 1.2rem; margin-top: 0.3rem; list-style-type: disc;">
+                        <li>Host this HTML file on HTTPS (e.g. <strong>GitHub Pages, Vercel, Netlify</strong>).</li>
+                        <li>Or ensure Phone GPS is <strong>ON</strong> and Browser Site Permissions allow Location.</li>
+                        <li>Or use the native <strong>GetLocation Android App</strong> in this folder.</li>
+                    </ul>
+                </div>
+            </div>
+            <button id="btnRetry" class="btn btn-secondary" style="margin-top: 1rem; padding: 0.6rem; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.4);">
+                🔄 Retry Location Request
+            </button>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="btn-group" id="btnGroup" style="display: none;">
+            <button id="btnDownload" class="btn btn-primary">
+                💾 Download location_coordinates.txt Again
+            </button>
+            <button id="btnCopy" class="btn btn-secondary">
+                📋 Copy Coordinates to Clipboard
+            </button>
+        </div>
+
+        <!-- Add to Home Screen Tip -->
+        <div class="tip-box">
+            💡 <strong>1-Tap Shortcut Tip:</strong> Host this page on HTTPS, open on your phone browser, tap the browser menu (⋮ or Share), and choose <strong>"Add to Home Screen"</strong>!
+        </div>
+    </div>
+
+    <div class="toast" id="toast">Saved location_coordinates.txt!</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchLocation();
+
+            document.getElementById('btnDownload').addEventListener('click', downloadTxtFile);
+            document.getElementById('btnCopy').addEventListener('click', copyToClipboard);
+            document.getElementById('btnRetry').addEventListener('click', fetchLocation);
+        });
+
+        let capturedData = null;
+
+        function fetchLocation() {
+            const statusBadge = document.getElementById('statusBadge');
+            const radarPin = document.getElementById('radarPin');
+            const errorHelpCard = document.getElementById('errorHelpCard');
+
+            errorHelpCard.style.display = 'none';
+
+            // Check for insecure context (content:// or file:// or http:// non-localhost)
+            const isLocalOrContent = window.location.protocol === 'file:' || window.location.protocol === 'content:' || window.location.href.startsWith('content:');
+            const isInsecure = (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') || isLocalOrContent;
+
+            if (isInsecure) {
+                showError("HTTPS / Secure Context Required", "Location APIs are blocked by browsers when opening HTML files via content:// or file://. Please host on HTTPS (GitHub Pages/Vercel) or use the native GetLocation app.");
+                return;
+            }
+
+            if (!navigator.geolocation) {
+                showError("Geolocation is not supported by your browser", "Your browser does not support HTML5 Geolocation.");
+                return;
+            }
+
+            statusBadge.className = "status-badge loading";
+            statusBadge.innerHTML = `<span class="dot">⏳</span> <span>Requesting location...</span>`;
+            radarPin.className = "radar-pin";
+            radarPin.textContent = "📍";
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 12000,
+                maximumAge: 0
+            };
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude.toFixed(6);
+                    const lng = position.coords.longitude.toFixed(6);
+                    const acc = Math.round(position.coords.accuracy);
+                    const now = new Date();
+                    const timestamp = now.getFullYear() + '-' +
+                        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                        String(now.getDate()).padStart(2, '0') + ' ' +
+                        String(now.getHours()).padStart(2, '0') + ':' +
+                        String(now.getMinutes()).padStart(2, '0') + ':' +
+                        String(now.getSeconds()).padStart(2, '0');
+
+                    const mapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+
+                    capturedData = {
+                        lat, lng, acc, timestamp, mapsUrl
+                    };
+
+                    // Update UI
+                    document.getElementById('valLat').textContent = lat;
+                    document.getElementById('valLng').textContent = lng;
+                    document.getElementById('valAcc').textContent = `±${acc}m`;
+                    document.getElementById('valTime').textContent = timestamp;
+
+                    statusBadge.className = "status-badge success";
+                    statusBadge.innerHTML = "<span>✅</span> Captured & Saved!";
+                    radarPin.className = "radar-pin success";
+                    radarPin.textContent = "✓";
+
+                    document.getElementById('dataCard').style.display = 'block';
+                    document.getElementById('btnGroup').style.display = 'flex';
+
+                    // Auto download location_coordinates.txt
+                    downloadTxtFile();
+                },
+                (err) => {
+                    let msg = "Location permission denied";
+                    let help = "Permission was blocked by browser or denied by user. Check browser site permissions.";
+                    if (err.code === 2) {
+                        msg = "Location position unavailable";
+                        help = "Ensure Location/GPS is turned ON in your phone's quick settings.";
+                    }
+                    if (err.code === 3) {
+                        msg = "Location request timed out";
+                        help = "GPS signal took too long. Make sure you are not indoors or retry.";
+                    }
+                    showError(msg, help);
+                },
+                options
+            );
+        }
+
+        function showError(msg, helpMsg) {
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.className = "status-badge error";
+            statusBadge.innerHTML = `<span>⚠️</span> ${msg}`;
+            document.getElementById('radarPin').textContent = "✕";
+
+            if (helpMsg) {
+                const errorHelpCard = document.getElementById('errorHelpCard');
+                document.getElementById('errorHelpTitle').textContent = "⚠️ " + msg;
+                document.getElementById('errorHelpMsg').textContent = helpMsg;
+                errorHelpCard.style.display = 'block';
+            }
+        }
+
+        function generateTxtContent() {
+            if (!capturedData) return "";
+            return `=== Location Coordinates ===
+Timestamp : ${capturedData.timestamp}
+Latitude  : ${capturedData.lat}
+Longitude : ${capturedData.lng}
+Accuracy  : ±${capturedData.acc} meters
+Google Maps: ${capturedData.mapsUrl}
+`;
+        }
+
+        function downloadTxtFile() {
+            if (!capturedData) return;
+            const content = generateTxtContent();
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'location_coordinates.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast("Downloaded location_coordinates.txt!");
+        }
+
+        function copyToClipboard() {
+            if (!capturedData) return;
+            const content = generateTxtContent();
+            navigator.clipboard.writeText(content).then(() => {
+                showToast("Copied coordinates to clipboard!");
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>
